@@ -6,6 +6,7 @@ import {
     handleErrorNotification,
     handleNewNotification,
 } from "../components/utils/handleNotification"
+import { truncateStr } from "../components/utils/misc"
 import { readContract, writeContract, eventContract } from "../components/utils/wagmiContract"
 //import LotteryEntrance from "../components/LotteryEntrance"
 import { useAccount } from "../components/utils/wagmiAccount"
@@ -16,6 +17,12 @@ import { UniswapWidget } from "../components/UniswapWidget"
 //import { useMoralis, useWeb3Contract } from "react-moralis"
 import { ethers } from "ethers"
 import { useEffect, useState } from "react"
+import { signal } from "@preact/signals"
+
+const proceeds = signal("0")
+const nftAddress = signal("")
+const tokenId = signal("")
+const price = signal("")
 
 export default function Home() {
     // UI Hydration Bug fix
@@ -26,10 +33,10 @@ export default function Home() {
     const { chain } = useNetwork()
     const dispatch = useNotification()
 
-    const [proceeds, setProceeds] = useState("0")
-    const [nftAddress, setNftAddress] = useState("")
-    const [tokenId, setTokenId] = useState("")
-    const [price, setPrice] = useState("")
+    // const [proceeds, setProceeds] = useState("0")
+    // const [nftAddress, setNftAddress] = useState("")
+    // const [tokenId, setTokenId] = useState("")
+    // const [price, setPrice] = useState("")
 
     //event NftMarketplace__WithdrewProceeds(address indexed seller, uint256 amount);
     eventContract(
@@ -90,7 +97,7 @@ export default function Home() {
                     console.log(`On Contract NftMarketplace ${account} getProceedsEarned ${error}`)
                 },
                 onSuccess: async (data) => {
-                    setProceeds(data.toString())
+                    proceeds.value = data.toString()
                     console.log(
                         `On Contract NftMarketplace getProceedsEarned Success: ${ethers.utils.formatUnits(
                             data,
@@ -129,9 +136,9 @@ export default function Home() {
                             hash: tx.hash,
                             description:
                                 "Approved NFT [" +
-                                nftAddress.toString() +
+                                truncateStr(nftAddress.value.toString(), 15) +
                                 ", TokenId(" +
-                                tokenId +
+                                tokenId.value +
                                 ")]",
                             confirmations: 1,
                         })
@@ -162,9 +169,9 @@ export default function Home() {
                             hash: tx.hash,
                             description:
                                 "NFT Marketplace Listed Item [" +
-                                nftAddress.toString() +
+                                truncateStr(nftAddress.value.toString(), 15) +
                                 ", TokenId(" +
-                                tokenId +
+                                tokenId.value +
                                 ")]",
                             confirmations: 1,
                         })
@@ -173,11 +180,11 @@ export default function Home() {
                             dispatch,
                             "NFT List Item",
                             "Listed NFT [" +
-                                nftAddress.toString() +
+                                truncateStr(nftAddress.value.toString(), 15) +
                                 ", TokenId(" +
-                                tokenId +
+                                tokenId.value +
                                 "), Price(" +
-                                ethers.utils.formatUnits(price, "ether") +
+                                ethers.utils.formatUnits(price.value, "ether") +
                                 ")]"
                         )
                     })()
@@ -208,7 +215,7 @@ export default function Home() {
                             hash: tx.hash,
                             description:
                                 "WithdrawProceeds (" +
-                                ethers.utils.formatUnits(price, "ether") +
+                                ethers.utils.formatUnits(price.value, "ether") +
                                 " ETH)",
                             confirmations: 1,
                         })
@@ -241,12 +248,15 @@ export default function Home() {
             : 0
         //const marketplaceAddress = networkMapping[chainString].NftMarketplace[0]
 
-        setNftAddress(data.data[0].inputResult)
-        setTokenId(data.data[1].inputResult)
-        setPrice(ethers.utils.parseUnits(data.data[2].inputResult, "ether").toString())
+        // setNftAddress(data.data[0].inputResult)
+        // setTokenId(data.data[1].inputResult)
+        // setPrice(ethers.utils.parseUnits(data.data[2].inputResult, "ether").toString())
+        nftAddress.value = data.data[0].inputResult
+        tokenId.value = data.data[1].inputResult
+        price.value = ethers.utils.parseUnits(data.data[2].inputResult, "ether").toString()
         if (writeRCs[0].write) {
             writeRCs[0].write({
-                args: [marketplaceAddress, tokenId],
+                args: [marketplaceAddress, tokenId.value],
                 /*
                 overrides: {
                     gasPrice: 10000000,
@@ -282,7 +292,7 @@ export default function Home() {
     function listItem() {
         console.log("listItem...")
         if (writeRCs[1].write) {
-            writeRCs[1].write({ args: [nftAddress, tokenId, price] })
+            writeRCs[1].write({ args: [nftAddress.value, tokenId.value, price.value] })
         } else {
             // Reason in preWriteRC
             console.log("Cannot ListItem. writeRCs Reason - ", preWriteRCs[1].error)
@@ -394,12 +404,12 @@ export default function Home() {
                         id="Main Form"
                     />
                 ) : (
-                    <></>
+                    <div>Connect to Wallet to Sell NFT</div>
                 )}
-                {!isSSR && account && isConnected && parseInt(proceeds) > 0 ? (
+                {!isSSR && account && isConnected && parseInt(proceeds.value) > 0 ? (
                     <div className="float-left">
                         <div className="align-middle">
-                            Withdraw {ethers.utils.formatUnits(proceeds)} proceeds
+                            Withdraw {ethers.utils.formatUnits(proceed.values)} proceeds
                         </div>
                         <Button
                             className=""

@@ -1,4 +1,5 @@
 import { handleErrorNotification, handleNewNotification } from "./utils/handleNotification"
+import { truncateStr } from "./utils/misc"
 import { Modal, Input, useNotification } from "web3uikit"
 import { useState } from "react"
 import { useNetwork } from "wagmi"
@@ -6,6 +7,10 @@ import { readContract, writeContract, eventContract } from "./utils/wagmiContrac
 //import { useWeb3Contract } from "react-moralis"
 //import nftMarketplaceAbi from "../constants/NftMarketplace.json"
 import { ethers } from "ethers"
+
+import { signal } from "@preact/signals"
+
+const priceToUpdateListingWith = signal(0)
 
 export default function UpdateListingModal({
     nftAddress: basicNftAddress,
@@ -17,7 +22,7 @@ export default function UpdateListingModal({
     const { chain } = useNetwork()
     const dispatch = useNotification()
 
-    const [priceToUpdateListingWith, setPriceToUpdateListingWith] = useState(0)
+    //const [priceToUpdateListingWith, setPriceToUpdateListingWith] = useState(0)
 
     /*
     const handleUpdateListingSuccess = async (tx) => {
@@ -51,7 +56,7 @@ export default function UpdateListingModal({
                 args: [
                     basicNftAddress,
                     tokenId,
-                    ethers.utils.parseEther(priceToUpdateListingWith || "0"),
+                    ethers.utils.parseEther(priceToUpdateListingWith.value || "0"),
                 ],
                 onError: (error) => {
                     // {code, message}
@@ -69,7 +74,7 @@ export default function UpdateListingModal({
                         console.log("On Contract NftMarketplace updateListing Success", tx) // {hash, wait}
                         const msg =
                             "Updated NFT List [" +
-                            basicNftAddress.toString() +
+                            truncateStr(basicNftAddress.toString()) +
                             ", TokenId(" +
                             tokenId +
                             ")]"
@@ -97,6 +102,10 @@ export default function UpdateListingModal({
         }
     }
 
+    function updatePrice(event) {
+        priceToUpdateListingWith.value = event.target.value
+    }
+
     return (
         <Modal
             isVisible={isVisible}
@@ -119,9 +128,7 @@ export default function UpdateListingModal({
                 label="Update listing price in L1 Currency (ETH)"
                 name="New listing price"
                 type="number"
-                onChange={(event) => {
-                    setPriceToUpdateListingWith(event.target.value)
-                }}
+                onChange={updatePrice}
             />
         </Modal>
     )

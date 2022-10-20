@@ -1,38 +1,29 @@
 import { handleErrorNotification, handleNewNotification } from "./utils/handleNotification"
 
+import { batch, computed, signal } from "@preact/signals"
 import { useState, useEffect } from "react"
 //import { useWeb3Contract, useMoralis } from "react-moralis"
 import { useNetwork } from "wagmi"
 import { useAccount } from "./utils/wagmiAccount"
+import { truncateStr } from "./utils/misc"
 import { readContract, writeContract, eventContract } from "./utils/wagmiContract"
 import Image from "next/image"
 import { Card, useNotification } from "web3uikit"
 import { ethers } from "ethers"
 import UpdateListingModal from "./UpdateListingModal"
 
-const truncateStr = (fullStr, strLen) => {
-    if (fullStr.length <= strLen) return fullStr
-
-    const separator = "..."
-    const seperatorLength = separator.length
-    const charsToShow = strLen - seperatorLength
-    const frontChars = Math.ceil(charsToShow / 2)
-    const backChars = Math.floor(charsToShow / 2)
-    return (
-        fullStr.substring(0, frontChars) + separator + fullStr.substring(fullStr.length - backChars)
-    )
-}
-
 export default function NFTBox({ price, nftAddress, tokenId, marketplaceAddress, seller }) {
+    const [imageURI, setImageURI] = useState("")
+    const [showModal, setShowModal] = useState(false)
+    const tokenName = signal("")
+    const tokenDescription = signal("")
+
     const { address, isConnected } = useAccount()
     const { chain } = useNetwork()
-    //const { isWeb3Enabled, account } = useMoralis()
-    const [imageURI, setImageURI] = useState("")
-    const [tokenName, setTokenName] = useState("")
-    const [tokenDescription, setTokenDescription] = useState("")
-    const [showModal, setShowModal] = useState(false)
-    const hideModal = () => setShowModal(false)
     const dispatch = useNotification()
+    //const { isWeb3Enabled, account } = useMoralis()
+    // const [tokenName, setTokenName] = useState("")
+    // const [tokenDescription, setTokenDescription] = useState("")
 
     // struct method
     // {
@@ -64,11 +55,17 @@ export default function NFTBox({ price, nftAddress, tokenId, marketplaceAddress,
                         // IPFS Gateway: A server that will return IPFS files from a "normal" URL.
                         const requestURL = tokenURI.replace("ipfs://", "https://ipfs.io/ipfs/")
                         const tokenURIResponse = await (await fetch(requestURL)).json()
-                        const imageURI = tokenURIResponse.image
-                        const imageURIURL = imageURI.replace("ipfs://", "https://ipfs.io/ipfs/")
+                        const imageURIURL = tokenURIResponse.image.replace(
+                            "ipfs://",
+                            "https://ipfs.io/ipfs/"
+                        )
+                        // setTokenName(tokenURIResponse.name)
+                        // setTokenDescription(tokenURIResponse.description)
+                        batch(() => {
+                            tokenName.value = tokenURIResponse.name
+                            tokenDescription.value = tokenURIResponse.description
+                        })
                         setImageURI(imageURIURL)
-                        setTokenName(tokenURIResponse.name)
-                        setTokenDescription(tokenURIResponse.description)
                         // We could render the Image on our sever, and just call our sever.
                         // For testnets & mainnet -> use moralis server hooks
                         // Have the world adopt IPFS
@@ -77,7 +74,7 @@ export default function NFTBox({ price, nftAddress, tokenId, marketplaceAddress,
                     // get the tokenURI
                     // using the image tag from the tokenURI, get the image
 
-                    console.log(`On Contract tokenURI Success: `, tokenURI, `price ${price}`)
+                    console.log(`On Contract tokenURI Success: `, imageURI, `price ${price}`)
                     //publish("nftMktPlace_tokenURI", { data })
                 },
             },
@@ -172,16 +169,23 @@ export default function NFTBox({ price, nftAddress, tokenId, marketplaceAddress,
 
     const isOwnedByUser =
         seller.toString().toUpperCase() == address.toString().toUpperCase() || seller === undefined
-    const formattedSellerAddress = isOwnedByUser ? "you" : truncateStr(seller || "", 15)
-    const formattedNftAddress = truncateStr(nftAddress || "", 15)
+    const formattedSellerAddress = truncateStr(isOwnedByUser ? "you" : seller, 15)
+    const formattedNftAddress = truncateStr(nftAddress, 15)
 
     const handleCardClick = () => {
-        isOwnedByUser ? setShowModal(true) : buyItem()
+        //console.log("isOwnedByUser", isOwnedByUser, "showModal", showModal, "imageURI", imageURI)
+        isOwnedByUser && imageURI ? setShowModal(true) : buyItem()
         // : buyItem({
         //       onError: (error) => console.log(error),
         //       onSuccess: handleBuyItemSuccess,
         //   })
     }
+
+    const handleModalClose = () => {
+        //console.log("showModal", showModal)
+        setShowModal(false)
+    }
+
     /*
     const handleBuyItemSuccess = async (tx) => {
         await tx.wait(1)
@@ -195,48 +199,42 @@ export default function NFTBox({ price, nftAddress, tokenId, marketplaceAddress,
     */
 
     return (
-        <div>
-            {imageURI ? (
-                <div className="mr-2">
-                    <UpdateListingModal
-                        isVisible={showModal}
-                        tokenId={tokenId}
-                        marketplaceAddress={marketplaceAddress}
-                        nftAddress={nftAddress}
-                        onClose={hideModal}
-                    />
-                    <Card
-                        title={tokenName}
-                        description={tokenDescription}
-                        onClick={handleCardClick}
-                    >
-                        <div className="p-2">
-                            <div className="flex flex-col items-end gap-2">
-                                <div>#{tokenId}</div>
-                                <div className="italic text-sm">
-                                    Owned by {formattedSellerAddress}
-                                </div>
-                                <div className="italic text-sm">
-                                    NftAddress {formattedNftAddress}
-                                </div>
-                                <Image
-                                    loader={() => imageURI}
-                                    src={imageURI}
-                                    height="200"
-                                    width="200"
-                                />
-                                <div className="font-bold">
-                                    {ethers.utils.formatUnits(price, "ether")} ETH
-                                </div>
+        <div className="mr-2">
+            <UpdateListingModal
+                isVisible={showModal}
+                tokenId={tokenId}
+                marketplaceAddress={marketplaceAddress}
+                nftAddress={nftAddress}
+                onClose={handleModalClose}
+            />
+            <Card
+                title={tokenName.value}
+                description={tokenDescription.value}
+                onClick={handleCardClick}
+            >
+                <div className="p-2">
+                    <div className="flex flex-col items-end gap-2">
+                        <div>#{tokenId}</div>
+                        <div className="italic text-sm">Owned by {formattedSellerAddress}</div>
+                        <div className="italic text-sm">NftAddress {formattedNftAddress}</div>
+                        {imageURI ? (
+                            <Image
+                                loader={() => imageURI}
+                                src={imageURI}
+                                height="200"
+                                width="200"
+                            />
+                        ) : (
+                            <div className="relative h-48 w-48 p-2">
+                                <div className="absolute left-2/4 top-2/4 animate-spin spinner-border h-8 w-8 border-b-2 -ml-4 -mt-4 rounded-full"></div>
                             </div>
+                        )}
+                        <div className="font-bold">
+                            {ethers.utils.formatUnits(price, "ether")} ETH
                         </div>
-                    </Card>
+                    </div>
                 </div>
-            ) : (
-                <div className="relative h-48 w-48 p-2">
-                    <div className="absolute left-2/4 top-2/4 animate-spin spinner-border h-8 w-8 border-b-2 -ml-4 -mt-4 rounded-full"></div>
-                </div>
-            )}
+            </Card>
         </div>
     )
 }
