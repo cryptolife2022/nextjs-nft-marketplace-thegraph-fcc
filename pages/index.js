@@ -7,13 +7,14 @@ import { useAccount } from "../components/utils/wagmiAccount"
 import { useNetwork, useSwitchNetwork } from "wagmi"
 
 import NFTBox from "../components/NFTBox"
-import { useQuery } from "@apollo/client"
+import { useQuery, NetworkStatus } from "@apollo/client"
 import { UniswapWidget } from "../components/UniswapWidget"
 
 export default function Home() {
     // UI Hydration Bug fix
     // Not neccessary with signals
     const isSSR = useIsSSR()
+    const queries = constants.QUERIES
 
     //const { isWeb3Enabled, chainId } = useMoralis()
     const { address } = useAccount()
@@ -27,7 +28,16 @@ export default function Home() {
         : 0
     //const nftMarketplaceAddress = networkMapping[chainString].NftMarketplace[0]
 
-    const { loading, error, data: listedNfts } = useQuery(constants.GET_ACTIVE_ITEMS)
+    const {
+        loading,
+        error,
+        data: listedNfts,
+        refetch,
+        networkStatus,
+    } = useQuery(queries.get_active_items, {
+        variables: { buyerAddress: queries.NO_BUYER },
+        pollInterval: 0,
+    })
     return (
         <div className={styles.container}>
             <div className="p-5 border-b-2 flex flex-row">

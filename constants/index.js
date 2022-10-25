@@ -1,7 +1,7 @@
 const contractAddresses = require("./networkMapping.json")
 const BasicNftAbi = require("./BasicNft.json")
 const NftMarketplaceAbi = require("./NftMarketplace.json")
-import GET_ACTIVE_ITEMS from "./subgraphQueries"
+import QUERIES from "./subgraphQueries"
 const appName = "Nft Marketplace"
 const favIcon = "/favicon.ico"
 const userPage = "/user"
@@ -18,6 +18,6 @@ module.exports = {
     contractAddresses,
     BasicNftAbi,
     NftMarketplaceAbi,
-    GET_ACTIVE_ITEMS,
+    QUERIES,
     loginRequestPath,
 }

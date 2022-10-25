@@ -1,20 +1,19 @@
 import { gql } from "@apollo/client"
 
-const NO_BUYER = "0x0000000000000000000000000000000000000000"
-
-const GET_ACTIVE_ITEMS = gql`
-    {
-        nftMarketplaceActiveItems(
-            first: 5
-            where: { buyer: "0x0000000000000000000000000000000000000000" }
-        ) {
-            id
-            buyer
-            seller
-            nftAddress
-            tokenId
-            price
+const QUERIES = {
+    NO_BUYER: "0x0000000000000000000000000000000000000000",
+    get_active_items: gql`
+        query GetActiveItems($buyerAddress: String!) {
+            nftMarketplaceActiveItems(first: 5, where: { buyer: $buyerAddress }) {
+                id
+                buyer
+                seller
+                nftAddress
+                tokenId
+                price
+            }
         }
-    }
-`
-export default GET_ACTIVE_ITEMS
+    `,
+}
+
+export default QUERIES

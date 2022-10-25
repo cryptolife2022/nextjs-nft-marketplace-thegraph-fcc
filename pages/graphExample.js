@@ -1,25 +1,12 @@
-import { useQuery, gql } from "@apollo/client"
-
-const NO_BUYER = "0x0000000000000000000000000000000000000000"
-
-const GET_ACTIVE_ITEMS = gql`
-    {
-        nftMarketplaceActiveItems(
-            first: 5
-            where: { buyer: "0x0000000000000000000000000000000000000000" }
-        ) {
-            id
-            buyer
-            seller
-            nftAddress
-            tokenId
-            price
-        }
-    }
-`
+import { useQuery } from "@apollo/client"
+import constants from "../constants"
 
 export default function GraphExample() {
-    const { loading, error, data } = useQuery(GET_ACTIVE_ITEMS)
-    console.log(data)
+    const queries = constants.QUERIES
+    //console.log(queries)
+    const rc = useQuery(queries.get_active_items, {
+        variables: { buyerAddress: queries.NO_BUYER },
+    })
+    console.log(rc.data)
     return <div>hi</div>
 }

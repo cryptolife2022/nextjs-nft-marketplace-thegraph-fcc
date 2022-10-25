@@ -82,6 +82,10 @@ export default function Header() {
                     </button>
                 ) : (
                     <ConnectButton
+                        chainStatus={{ smallScreen: "icon", largeScreen: "full" }}
+                        showBalance={{ smallScreen: false, largeScreen: true }}
+                        accountStatus={{ smallScreen: "avatar", largeScreen: "full" }}
+                        label="Connect Wallet"
                         ref={connectors}
                         tabIndex={-1}
                         className={`${styles.connectors}`}
