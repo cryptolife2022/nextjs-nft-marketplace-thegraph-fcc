@@ -4,6 +4,7 @@ import { Modal, Input, useNotification } from "web3uikit"
 import { useState } from "react"
 import { useNetwork } from "wagmi"
 import { readContract, writeContract, eventContract } from "./utils/wagmiContract"
+import { useAddRecentTransaction } from "@rainbow-me/rainbowkit"
 //import { useWeb3Contract } from "react-moralis"
 //import nftMarketplaceAbi from "../constants/NftMarketplace.json"
 import { ethers } from "ethers"
@@ -21,6 +22,7 @@ export default function UpdateListingModal({
 }) {
     const { chain } = useNetwork()
     const dispatch = useNotification()
+    const addRecentTransaction = useAddRecentTransaction()
 
     //const [priceToUpdateListingWith, setPriceToUpdateListingWith] = useState(0)
 

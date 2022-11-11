@@ -13,6 +13,7 @@ import { useAccount } from "../components/utils/wagmiAccount"
 import { useNetwork, useSwitchNetwork } from "wagmi"
 
 import { Form, useNotification, Button } from "web3uikit"
+import { useAddRecentTransaction } from "@rainbow-me/rainbowkit"
 import { UniswapWidget } from "../components/UniswapWidget"
 //import { useMoralis, useWeb3Contract } from "react-moralis"
 import { ethers } from "ethers"
@@ -32,6 +33,7 @@ export default function Home() {
     const { address: account, isConnected } = useAccount()
     const { chain } = useNetwork()
     const dispatch = useNotification()
+    const addRecentTransaction = useAddRecentTransaction()
 
     // const [proceeds, setProceeds] = useState("0")
     // const [nftAddress, setNftAddress] = useState("")
