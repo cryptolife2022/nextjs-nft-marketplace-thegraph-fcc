@@ -9,6 +9,7 @@ import { truncateStr } from "./utils/misc"
 import { readContract, writeContract, eventContract } from "./utils/wagmiContract"
 import Image from "next/image"
 import { Card, useNotification } from "web3uikit"
+import { useAddRecentTransaction } from "@rainbow-me/rainbowkit"
 import { ethers } from "ethers"
 import UpdateListingModal from "./UpdateListingModal"
 
@@ -27,6 +28,7 @@ export default function NFTBox({
 
     const { chain } = useNetwork()
     const dispatch = useNotification()
+    const addRecentTransaction = useAddRecentTransaction()
     //const { isWeb3Enabled, account } = useMoralis()
     // const [tokenName, setTokenName] = useState("")
     // const [tokenDescription, setTokenDescription] = useState("")
