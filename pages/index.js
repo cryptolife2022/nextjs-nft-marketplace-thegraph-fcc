@@ -17,7 +17,7 @@ export default function Home() {
     const queries = constants.QUERIES
 
     //const { isWeb3Enabled, chainId } = useMoralis()
-    const { address } = useAccount()
+    const { address: walletAddress, isConnected } = useAccount()
     const { chain } = useNetwork()
 
     const chainString = chain?.id ? parseInt(chain.id).toString() : "31337"
@@ -38,13 +38,14 @@ export default function Home() {
         variables: { buyerAddress: queries.NO_BUYER },
         pollInterval: 0,
     })
+
     return (
         <div className={styles.container}>
             <div className="p-5 border-b-2 flex flex-row">
                 <div className="container mx-auto">
                     <h1 className="py-4 px-4 font-bold text-2xl">Recently Listed</h1>
                     <div className="flex flex-wrap">
-                        {!isSSR && address ? (
+                        {!isSSR && walletAddress ? (
                             loading || !listedNfts ? (
                                 <div className="float-left">
                                     <div className="float-left animate-spin spinner-border h-8 w-8 border-b-2 p-1 rounded-full"></div>
@@ -58,6 +59,7 @@ export default function Home() {
                                     const { price, nftAddress, tokenId, seller } = nft
                                     return (
                                         <NFTBox
+                                            walletAddress={walletAddress}
                                             price={price}
                                             nftAddress={nftAddress}
                                             tokenId={tokenId}

@@ -4,7 +4,7 @@ import { batch, computed, signal } from "@preact/signals"
 import { useState, useEffect } from "react"
 //import { useWeb3Contract, useMoralis } from "react-moralis"
 import { useNetwork } from "wagmi"
-import { useAccount } from "./utils/wagmiAccount"
+//import { useAccount } from "./utils/wagmiAccount"
 import { truncateStr } from "./utils/misc"
 import { readContract, writeContract, eventContract } from "./utils/wagmiContract"
 import Image from "next/image"
@@ -12,18 +12,54 @@ import { Card, useNotification } from "web3uikit"
 import { ethers } from "ethers"
 import UpdateListingModal from "./UpdateListingModal"
 
-export default function NFTBox({ price, nftAddress, tokenId, marketplaceAddress, seller }) {
+export default function NFTBox({
+    walletAddress,
+    price,
+    nftAddress,
+    tokenId,
+    marketplaceAddress,
+    seller,
+}) {
     const [imageURI, setImageURI] = useState("")
     const [showModal, setShowModal] = useState(false)
     const tokenName = signal("")
     const tokenDescription = signal("")
 
-    const { address, isConnected } = useAccount()
     const { chain } = useNetwork()
     const dispatch = useNotification()
     //const { isWeb3Enabled, account } = useMoralis()
     // const [tokenName, setTokenName] = useState("")
     // const [tokenDescription, setTokenDescription] = useState("")
+
+    async function processTokenURI(tokenURI) {
+        //console.log(`The TokenURI is ${tokenURI}`)
+        // We are going to cheat a little here...
+        if (tokenURI) {
+            // IPFS Gateway: A server that will return IPFS files from a "normal" URL.
+            const requestURL = tokenURI.replace("ipfs://", "https://ipfs.io/ipfs/")
+            const tokenURIResponse = await (await fetch(requestURL)).json()
+            const imageURIURL = tokenURIResponse.image.replace("ipfs://", "https://ipfs.io/ipfs/")
+            // setTokenName(tokenURIResponse.name)
+            // setTokenDescription(tokenURIResponse.description)
+            batch(() => {
+                tokenName.value = tokenURIResponse.name
+                tokenDescription.value = tokenURIResponse.description
+            })
+            setImageURI(imageURIURL)
+            // We could render the Image on our sever, and just call our sever.
+            // For testnets & mainnet -> use moralis server hooks
+            // Have the world adopt IPFS
+            // Build our own IPFS gateway
+
+            console.log(`On Contract tokenURI(${tokenId}) Success: `, imageURIURL, `price ${price}`)
+        } else {
+            console.log(`On Contract tokenURI NULL Success: price ${price}`)
+        }
+        // get the tokenURI
+        // using the image tag from the tokenURI, get the image
+
+        //publish("nftMktPlace_tokenURI", { tokenURI })
+    }
 
     // struct method
     // {
@@ -47,36 +83,8 @@ export default function NFTBox({ price, nftAddress, tokenId, marketplaceAddress,
                 onError: (error) => {
                     console.log(`On Contract tokenURI ${error}`)
                 },
-                onSuccess: async (data) => {
-                    let tokenURI = data
-                    //console.log(`The TokenURI is ${tokenURI}`)
-                    // We are going to cheat a little here...
-                    if (tokenURI) {
-                        // IPFS Gateway: A server that will return IPFS files from a "normal" URL.
-                        const requestURL = tokenURI.replace("ipfs://", "https://ipfs.io/ipfs/")
-                        const tokenURIResponse = await (await fetch(requestURL)).json()
-                        const imageURIURL = tokenURIResponse.image.replace(
-                            "ipfs://",
-                            "https://ipfs.io/ipfs/"
-                        )
-                        // setTokenName(tokenURIResponse.name)
-                        // setTokenDescription(tokenURIResponse.description)
-                        batch(() => {
-                            tokenName.value = tokenURIResponse.name
-                            tokenDescription.value = tokenURIResponse.description
-                        })
-                        setImageURI(imageURIURL)
-                        // We could render the Image on our sever, and just call our sever.
-                        // For testnets & mainnet -> use moralis server hooks
-                        // Have the world adopt IPFS
-                        // Build our own IPFS gateway
-                    }
-                    // get the tokenURI
-                    // using the image tag from the tokenURI, get the image
-
-                    console.log(`On Contract tokenURI Success: `, imageURI, `price ${price}`)
-                    //publish("nftMktPlace_tokenURI", { data })
-                },
+                enabled: false,
+                onSuccess: processTokenURI,
             },
         ],
         chain
@@ -125,15 +133,21 @@ export default function NFTBox({ price, nftAddress, tokenId, marketplaceAddress,
         const rc = contractReadRCs[0]
 
         //console.log("contractReadRCs[0]...", rc)
-        if (!rc.isLoading && !rc.isFetching && !rc.isRefetching) {
+        if (rc.isFetched) {
+            processTokenURI(rc.data)
+        } else if (!rc.isLoading && !rc.isFetching && !rc.isRefetching && basicNftAddresses[0]) {
             console.log("getTokenURI...")
             contractReadRCs[0].refetch()
         }
+
+        return true
     }
 
     function buyItem() {
         if (writeRCs[0].write) {
             writeRCs[0].write()
+        } else if (!basicNftAddresses[0]) {
+            console.log("Cannot Buy Item. Reason - BasicNftaddress missing")
         } else {
             // Reason in preWriteRC
             console.log("Cannot Buy Item. writeRCs Reason - ", preWriteRCs[0].error)
@@ -163,12 +177,9 @@ export default function NFTBox({ price, nftAddress, tokenId, marketplaceAddress,
     })
     */
 
-    useEffect(() => {
-        if (isConnected) getTokenURI()
-    }, [isConnected])
-
     const isOwnedByUser =
-        seller.toString().toUpperCase() == address.toString().toUpperCase() || seller === undefined
+        seller.toString().toUpperCase() == walletAddress.toString().toUpperCase() ||
+        seller === undefined
     const formattedSellerAddress = truncateStr(isOwnedByUser ? "you" : seller, 15)
     const formattedNftAddress = truncateStr(nftAddress, 15)
 
@@ -217,18 +228,24 @@ export default function NFTBox({ price, nftAddress, tokenId, marketplaceAddress,
                         <div>#{tokenId}</div>
                         <div className="italic text-sm">Owned by {formattedSellerAddress}</div>
                         <div className="italic text-sm">NftAddress {formattedNftAddress}</div>
-                        {imageURI ? (
-                            <Image
-                                loader={() => imageURI}
-                                src={imageURI}
-                                height="200"
-                                width="200"
-                            />
-                        ) : (
-                            <div className="relative h-48 w-48 p-2">
-                                <div className="absolute left-2/4 top-2/4 animate-spin spinner-border h-8 w-8 border-b-2 -ml-4 -mt-4 rounded-full"></div>
-                            </div>
-                        )}
+                        {(() => {
+                            if (imageURI) {
+                                return (
+                                    <Image
+                                        loader={() => imageURI}
+                                        src={imageURI}
+                                        height="200"
+                                        width="200"
+                                    />
+                                )
+                            } else if (getTokenURI()) {
+                                return (
+                                    <div className="relative h-48 w-48 p-2">
+                                        <div className="absolute left-2/4 top-2/4 animate-spin spinner-border h-8 w-8 border-b-2 -ml-4 -mt-4 rounded-full"></div>
+                                    </div>
+                                )
+                            }
+                        })()}
                         <div className="font-bold">
                             {ethers.utils.formatUnits(price, "ether")} ETH
                         </div>
